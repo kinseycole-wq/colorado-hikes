@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Colorado Hikes</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <h1>Colorado Hikes</h1>
+      <p class="subtitle">A curated list by region</p>
+    </div>
+  </header>
+
+  <div class="controls">
+    <input
+      type="text"
+      id="search"
+      placeholder="Search by name or region…"
+      autocomplete="off"
+    />
+    <div class="filter-pills">
+      <button class="pill active" data-filter="all">All</button>
+      <button class="pill" data-filter="done">Done</button>
+      <button class="pill" data-filter="want">Want to Do</button>
+      <button class="pill" data-filter="planned">Planned</button>
+    </div>
+  </div>
+
+  <main id="app">
+    <p class="loading">Loading hikes…</p>
+  </main>
+
+  <footer>
+    <p>Data from <a href="https://www.alltrails.com" target="_blank">AllTrails</a></p>
+  </footer>
+
+  <!-- Firebase SDKs (compat/CDN — no build step needed) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
