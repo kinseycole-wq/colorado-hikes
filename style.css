@@ -1,1 +1,550 @@
-cat /Users/marykinsmancole/colorado-hikes/style.css | pbcopy
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --green: #2d6a4f;
+  --green-light: #40916c;
+  --green-bg: #d8f3dc;
+  --gold: #b5838d;
+  --blue: #4361ee;
+  --blue-bg: #e0e7ff;
+  --amber: #e07b39;
+  --amber-bg: #fde8d8;
+  --gray: #6b7280;
+  --border: #e5e7eb;
+  --bg: #f9fafb;
+  --card-bg: #ffffff;
+  --text: #111827;
+  --text-muted: #6b7280;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+header {
+  background: var(--green);
+  color: #fff;
+  padding: 2rem 1.5rem 1.5rem;
+}
+.header-inner {
+  max-width: 900px;
+  margin: 0 auto;
+}
+header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.subtitle {
+  opacity: 0.75;
+  margin-top: 0.25rem;
+  font-size: 0.95rem;
+}
+
+/* ── Controls ────────────────────────────────────────────────────────────── */
+.controls {
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+  padding: 1rem 1.5rem;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  max-width: 100%;
+}
+
+#search {
+  flex: 1;
+  min-width: 200px;
+  padding: 0.5rem 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+#search:focus {
+  border-color: var(--green-light);
+  box-shadow: 0 0 0 3px rgba(64, 145, 108, 0.15);
+}
+
+.filter-pills {
+  display: flex;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+
+.pill {
+  padding: 0.375rem 0.875rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: #fff;
+  font-size: 0.85rem;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: all 0.15s;
+  font-weight: 500;
+}
+.pill:hover {
+  border-color: var(--green-light);
+  color: var(--green);
+}
+.pill.active {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+}
+
+/* ── Main ────────────────────────────────────────────────────────────────── */
+main {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.loading, .no-results {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 3rem 0;
+  font-size: 1rem;
+}
+
+/* ── Region group ────────────────────────────────────────────────────────── */
+.region-group {
+  margin-bottom: 2rem;
+}
+
+.region-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.625rem;
+  margin-bottom: 0.625rem;
+  cursor: pointer;
+  user-select: none;
+}
+.region-header h2 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--green);
+  letter-spacing: 0.01em;
+}
+.region-count {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.region-toggle {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  transition: transform 0.2s;
+}
+.region-group.collapsed .region-toggle {
+  transform: rotate(-90deg);
+}
+.region-group.collapsed .trail-list {
+  display: none;
+}
+
+/* ── Trail list ──────────────────────────────────────────────────────────── */
+.trail-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+/* When log panel is open, square off card's bottom corners to connect visually */
+.trail-card-wrap:has(.hike-log[style*="display: block"]) .trail-card {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+/* Column header row */
+.trail-col-headers {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0 1rem 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+.col-name    { flex: 1; }
+.col-stats   { width: 160px; }
+.col-status  { width: 80px; text-align: center; }
+.col-person  { width: 68px; text-align: center; }
+.col-actions { width: 28px; flex-shrink: 0; }
+
+.trail-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.625rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+.trail-card:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  border-color: #d1d5db;
+}
+
+.trail-name {
+  flex: 1;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+.trail-name a {
+  color: var(--text);
+  text-decoration: none;
+}
+.trail-name a:hover {
+  color: var(--green-light);
+  text-decoration: underline;
+}
+
+.trail-stats {
+  display: flex;
+  gap: 0.875rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  width: 160px;
+}
+.stat {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* ── List status badge ───────────────────────────────────────────────────── */
+.trail-status {
+  width: 80px;
+  display: flex;
+  justify-content: center;
+}
+
+/* ── Person status buttons ───────────────────────────────────────────────── */
+.person-col {
+  width: 68px;
+  display: flex;
+  justify-content: center;
+}
+
+.person-btn {
+  cursor: pointer;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: #fff;
+  color: var(--text-muted);
+  transition: all 0.15s;
+  white-space: nowrap;
+  min-width: 56px;
+  text-align: center;
+  user-select: none;
+}
+.person-btn:hover {
+  border-color: #9ca3af;
+  background: var(--bg);
+}
+.person-btn.ps-done {
+  background: var(--green-bg);
+  border-color: #b7e4c7;
+  color: var(--green);
+}
+.person-btn.ps-want {
+  background: var(--blue-bg);
+  border-color: #c7d2fe;
+  color: var(--blue);
+}
+
+.badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+.badge-done {
+  background: var(--green-bg);
+  color: var(--green);
+}
+.badge-want {
+  background: var(--blue-bg);
+  color: var(--blue);
+}
+.badge-planned {
+  background: var(--amber-bg);
+  color: var(--amber);
+}
+
+/* ── Footer ──────────────────────────────────────────────────────────────── */
+footer {
+  text-align: center;
+  padding: 2rem 1rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+footer a {
+  color: var(--green-light);
+}
+
+/* ── Add hike form ───────────────────────────────────────────────────────── */
+.add-hike-btn {
+  margin-top: 0.375rem;
+  width: 100%;
+  padding: 0.45rem 1rem;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+}
+.add-hike-btn:hover {
+  border-color: var(--green-light);
+  color: var(--green);
+  background: var(--green-bg);
+}
+
+.add-hike-form {
+  margin-top: 0.375rem;
+  border: 1px solid var(--green-light);
+  border-radius: 10px;
+  padding: 0.875rem 1rem;
+  background: #fff;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: flex-end;
+}
+.add-hike-form input,
+.add-hike-form select {
+  padding: 0.4rem 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  outline: none;
+  background: var(--bg);
+  color: var(--text);
+  transition: border-color 0.15s;
+}
+.add-hike-form input:focus,
+.add-hike-form select:focus {
+  border-color: var(--green-light);
+  box-shadow: 0 0 0 2px rgba(64,145,108,0.15);
+}
+.add-hike-form .field-name  { flex: 2; min-width: 150px; }
+.add-hike-form .field-dist  { width: 90px; }
+.add-hike-form .field-elev  { width: 100px; }
+.add-hike-form .field-status { width: 120px; }
+.add-hike-form .field-url   { flex: 2; min-width: 150px; }
+.add-hike-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+.form-actions {
+  display: flex;
+  gap: 0.375rem;
+  align-items: flex-end;
+  padding-bottom: 1px;
+}
+.btn-save {
+  padding: 0.42rem 0.875rem;
+  background: var(--green);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-save:hover { background: var(--green-light); }
+.btn-cancel {
+  padding: 0.42rem 0.875rem;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-cancel:hover { border-color: #9ca3af; color: var(--text); }
+
+/* Delete button on custom hike cards */
+.btn-delete {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #d1d5db;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0 0.25rem;
+  transition: color 0.15s;
+  flex-shrink: 0;
+}
+.btn-delete:hover { color: #ef4444; }
+
+/* ── Edit URL inline ──────────────────────────────────────────────────────── */
+.btn-edit-url {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #d1d5db;
+  font-size: 0.7rem;
+  padding: 0 0.15rem;
+  vertical-align: middle;
+  transition: color 0.15s;
+  opacity: 0;
+}
+.trail-card:hover .btn-edit-url { opacity: 1; }
+.btn-edit-url:hover { color: var(--green-light); }
+
+.url-edit-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: nowrap;
+  width: 100%;
+}
+.url-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.28rem 0.5rem;
+  border: 1px solid var(--green-light);
+  border-radius: 5px;
+  font-size: 0.8rem;
+  outline: none;
+  background: var(--bg);
+  color: var(--text);
+}
+.btn-url-save {
+  padding: 0.28rem 0.6rem;
+  background: var(--green);
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-url-save:hover { background: var(--green-light); }
+.btn-url-cancel {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  padding: 0 0.2rem;
+}
+.btn-url-cancel:hover { color: #ef4444; }
+
+/* ── Log toggle button ────────────────────────────────────────────────────── */
+.btn-log {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0;
+  width: 28px;
+  text-align: center;
+  color: #d1d5db;
+  transition: color 0.15s;
+  flex-shrink: 0;
+  opacity: 0;
+}
+.trail-card:hover .btn-log { opacity: 1; }
+.btn-log:hover { color: var(--amber); }
+.btn-log.log-active { opacity: 1; color: var(--amber); }
+
+/* ── Hike log panel ───────────────────────────────────────────────────────── */
+.trail-card-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.hike-log {
+  background: #fffbf5;
+  border: 1px solid #fde8d8;
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  padding: 0.875rem 1rem;
+  margin-top: -2px;
+}
+
+.log-fields {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.log-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  flex: 1;
+  min-width: 160px;
+}
+
+.log-textarea {
+  padding: 0.45rem 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 70px;
+  color: var(--text);
+  background: #fff;
+  outline: none;
+  transition: border-color 0.15s;
+  line-height: 1.45;
+}
+.log-textarea--short { min-height: 50px; }
+.log-textarea:focus {
+  border-color: var(--amber);
+  box-shadow: 0 0 0 2px rgba(224, 123, 57, 0.15);
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 700px) {
+  .trail-col-headers { display: none; }
+  .trail-card { flex-wrap: wrap; gap: 0.5rem; }
+  .trail-stats { width: auto; }
+  .trail-status { width: auto; }
+  .person-col { width: auto; }
+  .btn-edit-url, .btn-log { opacity: 1; }
+}
