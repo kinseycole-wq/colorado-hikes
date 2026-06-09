@@ -61,14 +61,16 @@ db.ref('/').on('value', snap => {
   const newHN = data.hikeNotes    || {};
 
   // Update person status buttons in-place (no full re-render needed)
-  for (const [name, statuses] of Object.entries(newPS)) {
+  // newPS keys are fbKeys (safe Firebase keys)
+  for (const [key, statuses] of Object.entries(newPS)) {
     for (const person of ['leah', 'mac', 'robin']) {
       const newVal = statuses[person] || '';
-      if (getPersonStatus(name, person) !== newVal) {
-        if (!personStatus[name]) personStatus[name] = {};
-        personStatus[name][person] = newVal;
+      const curVal = personStatus[key]?.[person] || '';
+      if (curVal !== newVal) {
+        if (!personStatus[key]) personStatus[key] = {};
+        personStatus[key][person] = newVal;
         const btn = document.querySelector(
-          `[data-trail="${CSS.escape(name)}"][data-person="${person}"]`
+          `[data-fbkey="${CSS.escape(key)}"][data-person="${person}"]`
         );
         if (btn) applyPersonBtn(btn, newVal);
       }
@@ -103,19 +105,21 @@ db.ref('/').on('value', snap => {
 });
 
 // ── Person status helpers ─────────────────────────────────────────────────────
+// personStatus is keyed by fbKey(name) to avoid Firebase errors with / . # $ [ ]
 function getPersonStatus(name, person) {
-  return personStatus[name]?.[person] || '';
+  return personStatus[fbKey(name)]?.[person] || '';
 }
 
 function cycleStatus(name, person) {
-  const cur = getPersonStatus(name, person);
+  const key  = fbKey(name);
+  const cur  = personStatus[key]?.[person] || '';
   const next = cur === '' ? 'done' : cur === 'done' ? 'want' : '';
-  if (!personStatus[name]) personStatus[name] = {};
-  personStatus[name][person] = next;
+  if (!personStatus[key]) personStatus[key] = {};
+  personStatus[key][person] = next;
   savePersonStatus();
 
   const btn = document.querySelector(
-    `[data-trail="${CSS.escape(name)}"][data-person="${person}"]`
+    `[data-fbkey="${CSS.escape(key)}"][data-person="${person}"]`
   );
   if (btn) applyPersonBtn(btn, next);
 }
@@ -198,8 +202,9 @@ function personBtnHtml(name, person) {
   const cls     = status === 'done' ? ' ps-done' : status === 'want' ? ' ps-want' : '';
   const label   = status === 'done' ? '✓ Done'   : status === 'want' ? '★ Want'   : '—';
   const escaped = name.replace(/"/g, '&quot;');
+  const key     = fbKey(name);
   // No inline onclick — handled by event delegation in init()
-  return `<button class="person-btn${cls}" data-trail="${escaped}" data-person="${person}">${label}</button>`;
+  return `<button class="person-btn${cls}" data-trail="${escaped}" data-fbkey="${key}" data-person="${person}">${label}</button>`;
 }
 
 // ── Render ────────────────────────────────────────────────────────────────────
@@ -424,7 +429,7 @@ async function init() {
   document.getElementById('app').addEventListener('click', function(e) {
     const btn = e.target.closest('.person-btn');
     if (!btn) return;
-    const name   = btn.dataset.trail;
+    const name   = btn.dataset.trail;   // raw name (for display/lookup)
     const person = btn.dataset.person;
     if (name && person) cycleStatus(name, person);
   });
