@@ -194,11 +194,12 @@ function formatElev(ft) {
   return ft.toLocaleString() + ' ft';
 }
 function personBtnHtml(name, person) {
-  const status = getPersonStatus(name, person);
-  const cls    = status === 'done' ? ' ps-done' : status === 'want' ? ' ps-want' : '';
-  const label  = status === 'done' ? '✓ Done'   : status === 'want' ? '★ Want'   : '—';
+  const status  = getPersonStatus(name, person);
+  const cls     = status === 'done' ? ' ps-done' : status === 'want' ? ' ps-want' : '';
+  const label   = status === 'done' ? '✓ Done'   : status === 'want' ? '★ Want'   : '—';
   const escaped = name.replace(/"/g, '&quot;');
-  return `<button class="person-btn${cls}" data-trail="${escaped}" data-person="${person}" onclick="cycleStatus('${escaped.replace(/'/g, "\'")}','${person}')">${label}</button>`;
+  // No inline onclick — handled by event delegation in init()
+  return `<button class="person-btn${cls}" data-trail="${escaped}" data-person="${person}">${label}</button>`;
 }
 
 // ── Render ────────────────────────────────────────────────────────────────────
@@ -418,6 +419,15 @@ async function init() {
   await loadFromFirebase();
   allHikes = buildHikeList();
   applyFilters();
+
+  // Event delegation for person-status buttons — handles any trail name safely
+  document.getElementById('app').addEventListener('click', function(e) {
+    const btn = e.target.closest('.person-btn');
+    if (!btn) return;
+    const name   = btn.dataset.trail;
+    const person = btn.dataset.person;
+    if (name && person) cycleStatus(name, person);
+  });
 }
 
 document.getElementById('search').addEventListener('input', e => {
