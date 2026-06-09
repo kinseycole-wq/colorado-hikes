@@ -21,8 +21,10 @@ function fbKey(str) {
 let allHikes = [];
 let activeFilter = 'all';
 let searchQuery = '';
-let personStatus = {};   // { trailName: { leah: '', mac: '' } }
+let personStatus = {};   // { trailName: { leah: '', mac: '', robin: '' } }
 let customHikes  = {};   // { region: [ {...hike} ] }
+let trailUrls    = {};   // { fbKey(name): 'url' }  — user-edited URL overrides
+let hikeNotes    = {};   // { fbKey(name): { notes: '', tips: '', parking: '' } }
 
 // ── Firebase read/write ───────────────────────────────────────────────────────
 async function loadFromFirebase() {
@@ -30,6 +32,8 @@ async function loadFromFirebase() {
   const data = snap.val() || {};
   personStatus = data.personStatus || {};
   customHikes  = data.customHikes  || {};
+  trailUrls    = data.trailUrls    || {};
+  hikeNotes    = data.hikeNotes    || {};
 }
 
 function savePersonStatus() {
@@ -40,15 +44,25 @@ function saveCustomHikes() {
   db.ref('customHikes').set(customHikes).catch(console.error);
 }
 
-// Real-time listener: when the other person makes a change, update locally
+function saveTrailUrls() {
+  db.ref('trailUrls').set(trailUrls).catch(console.error);
+}
+
+function saveHikeNotes() {
+  db.ref('hikeNotes').set(hikeNotes).catch(console.error);
+}
+
+// Real-time listener: when another user makes a change, update locally
 db.ref('/').on('value', snap => {
   const data = snap.val() || {};
   const newPS = data.personStatus || {};
   const newCH = data.customHikes  || {};
+  const newTU = data.trailUrls    || {};
+  const newHN = data.hikeNotes    || {};
 
   // Update person status buttons in-place (no full re-render needed)
   for (const [name, statuses] of Object.entries(newPS)) {
-    for (const person of ['leah', 'mac']) {
+    for (const person of ['leah', 'mac', 'robin']) {
       const newVal = statuses[person] || '';
       if (getPersonStatus(name, person) !== newVal) {
         if (!personStatus[name]) personStatus[name] = {};
@@ -57,6 +71,25 @@ db.ref('/').on('value', snap => {
           `[data-trail="${CSS.escape(name)}"][data-person="${person}"]`
         );
         if (btn) applyPersonBtn(btn, newVal);
+      }
+    }
+  }
+
+  // If trail URLs changed, update links in-place
+  if (JSON.stringify(newTU) !== JSON.stringify(trailUrls)) {
+    trailUrls = newTU;
+    // re-render is simplest here since URLs affect link href
+    allHikes = buildHikeList();
+    applyFilters();
+  }
+
+  // If hike notes changed, update note fields in-place
+  if (JSON.stringify(newHN) !== JSON.stringify(hikeNotes)) {
+    hikeNotes = newHN;
+    for (const [key, noteObj] of Object.entries(newHN)) {
+      for (const field of ['notes', 'tips', 'parking']) {
+        const el = document.getElementById(`log-${field}-${key}`);
+        if (el && document.activeElement !== el) el.value = noteObj[field] || '';
       }
     }
   }
@@ -192,25 +225,53 @@ function renderHikes(hikes) {
     const regionId = region.replace(/\W+/g, '-');
 
     const cards = trails.map(h => {
-      const nameEsc   = h.name.replace(/'/g, "\'").replace(/"/g, '&quot;');
+      const nameEsc   = h.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+      const key       = fbKey(h.name);
+      const effectiveUrl = trailUrls[key] !== undefined ? trailUrls[key] : (h.alltrails_url || '');
       const deleteBtn = h.custom
-        ? `<button class="btn-delete" onclick="deleteCustomHike('${region.replace(/'/g,"\'")}','${nameEsc}')" title="Remove">×</button>`
+        ? `<button class="btn-delete" onclick="deleteCustomHike('${region.replace(/'/g,"\\'")}','${nameEsc}')" title="Remove">×</button>`
         : '';
+      const noteObj   = hikeNotes[key] || {};
       return `
-        <div class="trail-card">
-          <div class="trail-name">
-            ${h.alltrails_url
-              ? `<a href="${h.alltrails_url}" target="_blank" rel="noopener">${h.name}</a>`
-              : h.name}
+        <div class="trail-card-wrap" id="wrap-${key}">
+          <div class="trail-card">
+            <div class="trail-name">
+              <span id="name-display-${key}">
+                ${effectiveUrl
+                  ? `<a href="${effectiveUrl}" target="_blank" rel="noopener">${h.name}</a>`
+                  : h.name}
+                <button class="btn-edit-url" onclick="startEditUrl('${key}','${nameEsc}')" title="Edit link">✏</button>
+              </span>
+              <span id="name-edit-${key}" style="display:none" class="url-edit-wrap">
+                <input id="url-input-${key}" class="url-input" type="url" value="${effectiveUrl}" placeholder="https://alltrails.com/..." />
+                <button class="btn-url-save" onclick="saveUrl('${key}','${nameEsc}')">Save</button>
+                <button class="btn-url-cancel" onclick="cancelEditUrl('${key}')">✕</button>
+              </span>
+            </div>
+            <div class="trail-stats">
+              <span class="stat">&#128207; ${formatDist(h.distance_miles)}</span>
+              <span class="stat">&#11014; ${formatElev(h.elevation_ft)}</span>
+            </div>
+            <div class="trail-status">${badge(h.status)}</div>
+            <div class="person-col">${personBtnHtml(h.name, 'leah')}</div>
+            <div class="person-col">${personBtnHtml(h.name, 'mac')}</div>
+            <div class="person-col">${personBtnHtml(h.name, 'robin')}</div>
+            <button class="btn-log" onclick="toggleLog('${key}')" title="View / add notes">📝</button>
+            ${deleteBtn}
           </div>
-          <div class="trail-stats">
-            <span class="stat">&#128207; ${formatDist(h.distance_miles)}</span>
-            <span class="stat">&#11014; ${formatElev(h.elevation_ft)}</span>
+          <div class="hike-log" id="log-${key}" style="display:none">
+            <div class="log-fields">
+              <label class="log-label">Notes
+                <textarea id="log-notes-${key}" class="log-textarea" placeholder="How was the hike? What did you see?" onblur="saveNote('${key}','notes',this.value)">${noteObj.notes || ''}</textarea>
+              </label>
+              <label class="log-label">Tips
+                <textarea id="log-tips-${key}" class="log-textarea" placeholder="What should someone know before going?" onblur="saveNote('${key}','tips',this.value)">${noteObj.tips || ''}</textarea>
+              </label>
+              <label class="log-label">Parking
+                <textarea id="log-parking-${key}" class="log-textarea log-textarea--short" placeholder="Where to park, fees, permits, etc." onblur="saveNote('${key}','parking',this.value)">${noteObj.parking || ''}</textarea>
+              </label>
+            </div>
           </div>
-          <div class="trail-status">${badge(h.status)}</div>
-          <div class="person-col">${personBtnHtml(h.name, 'leah')}</div>
-          <div class="person-col">${personBtnHtml(h.name, 'mac')}</div>
-          ${deleteBtn}
         </div>`;
     }).join('');
 
@@ -227,6 +288,7 @@ function renderHikes(hikes) {
           <span class="col-status">List</span>
           <span class="col-person">Leah</span>
           <span class="col-person">Mac</span>
+          <span class="col-person">Robin</span>
         </div>
         <div class="trail-list">${cards}</div>
         <button class="add-hike-btn" onclick="showAddForm('${regionId}')">+ Add hike to ${region}</button>
@@ -297,6 +359,59 @@ function applyFilters() {
     return matchesStatus && matchesSearch;
   });
   renderHikes(filtered);
+}
+
+// ── Editable URL helpers ──────────────────────────────────────────────────────
+function startEditUrl(key, nameEsc) {
+  document.getElementById('name-display-' + key).style.display = 'none';
+  const editSpan = document.getElementById('name-edit-' + key);
+  editSpan.style.display = 'inline-flex';
+  editSpan.querySelector('input').focus();
+}
+
+function cancelEditUrl(key) {
+  document.getElementById('name-display-' + key).style.display = '';
+  document.getElementById('name-edit-' + key).style.display = 'none';
+}
+
+function saveUrl(key, nameEsc) {
+  const input = document.getElementById('url-input-' + key);
+  const url   = input ? input.value.trim() : '';
+  trailUrls[key] = url;
+  saveTrailUrls();
+  // Update the displayed link without full re-render
+  const displaySpan = document.getElementById('name-display-' + key);
+  if (displaySpan) {
+    // Find the trail name from the current a or text
+    const existingA = displaySpan.querySelector('a');
+    const trailName = existingA ? existingA.textContent : nameEsc;
+    const editBtn   = `<button class="btn-edit-url" onclick="startEditUrl('${key}','${nameEsc}')" title="Edit link">✏</button>`;
+    if (url) {
+      displaySpan.innerHTML = `<a href="${url}" target="_blank" rel="noopener">${trailName}</a> ${editBtn}`;
+    } else {
+      displaySpan.innerHTML = `${trailName} ${editBtn}`;
+    }
+  }
+  cancelEditUrl(key);
+}
+
+// ── Hike log helpers ──────────────────────────────────────────────────────────
+function toggleLog(key) {
+  const panel = document.getElementById('log-' + key);
+  if (!panel) return;
+  const isHidden = panel.style.display === 'none';
+  panel.style.display = isHidden ? 'block' : 'none';
+  // Highlight the log button when open
+  const wrap = document.getElementById('wrap-' + key);
+  const btn  = wrap ? wrap.querySelector('.btn-log') : null;
+  if (btn) btn.classList.toggle('log-active', isHidden);
+  if (isHidden) panel.querySelector('textarea')?.focus();
+}
+
+function saveNote(key, field, value) {
+  if (!hikeNotes[key]) hikeNotes[key] = {};
+  hikeNotes[key][field] = value;
+  saveHikeNotes();
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
